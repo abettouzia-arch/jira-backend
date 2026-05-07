@@ -1,0 +1,24 @@
+# Environments
+.env
+.env.local
+.env.*
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ChromaDB / Knowledge Service generated data
+knowledge_service/chroma_db/
+
+# Uploads / temporary files
+temp_uploads/
+*.zip
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db

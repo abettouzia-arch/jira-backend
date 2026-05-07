@@ -1,0 +1,170 @@
+version: "3.9"
+
+x-common-env: &common-env
+  MONGO_URI: ${MONGO_URI}
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+  GEMINI_API_KEY: ${GEMINI_API_KEY}
+  OLLAMA_URL: ${OLLAMA_URL}
+  REDIS_URL: ${REDIS_URL}
+  PARSING_SERVICE_URL: ${PARSING_SERVICE_URL}
+  COMPATIBILITY_SERVICE_URL: ${COMPATIBILITY_SERVICE_URL}
+  KNOWLEDGE_SERVICE_URL: ${KNOWLEDGE_SERVICE_URL}
+  REPORT_SERVICE_URL: ${REPORT_SERVICE_URL}
+  WORKER_URL: ${WORKER_URL}
+  ANONYMIZED_TELEMETRY: ${ANONYMIZED_TELEMETRY}
+  PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: ${PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION}
+  FLASK_ENV: ${FLASK_ENV}
+  DEBUG: ${DEBUG}
+
+services:
+
+  gateway:
+    build:
+      context: .
+      target: gateway
+    container_name: gateway
+    ports:
+      - "88:5000"
+    environment:
+      <<: *common-env
+      PORT: 5000
+    depends_on:
+      - mongodb
+      - redis
+    restart: unless-stopped
+
+  parsing_service:
+    build:
+      context: .
+      target: parsing_service
+    container_name: parsing_service
+    ports:
+      - "5001:5001"
+    environment:
+      <<: *common-env
+      PORT: 5001
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  compatibility_service:
+    build:
+      context: .
+      target: compatibility_service
+    container_name: compatibility_service
+    ports:
+      - "5002:5002"
+    environment:
+      <<: *common-env
+      PORT: 5002
+    depends_on:
+      - mongodb
+      - knowledge_service
+    restart: unless-stopped
+
+  knowledge_service:
+    build:
+      context: .
+      dockerfile: knowledge_service/Dockerfile
+    container_name: knowledge_service
+    ports:
+      - "5003:5003"
+    environment:
+      <<: *common-env
+      PORT: 5003
+    volumes:
+      - knowledge_chroma_data:/app/knowledge_service/chroma_db
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  report_service:
+    build:
+      context: .
+      target: report_service
+    container_name: report_service
+    ports:
+      - "5004:5004"
+    volumes:
+      - report_generated_files:/app/report_service/generated_reports
+    environment:
+      <<: *common-env
+      PORT: 5004
+    depends_on:
+      - mongodb
+      - knowledge_service
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: .
+      target: worker
+    container_name: worker
+    ports:
+      - "5005:5005"
+    environment:
+      <<: *common-env
+      PORT: 5005
+    depends_on:
+      - redis
+      - mongodb
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:6
+    container_name: mongo_db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    command: redis-server --appendonly yes 
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
+  mongo_express:
+    image: mongo-express:latest
+    container_name: mongo_express
+    ports:
+      - "8081:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://mongodb:27017/
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  ollama:
+    image: ollama/ollama:latest
+    container_name: ollama
+    expose:
+      - "11434"
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=-1 
+    restart: unless-stopped
+
+volumes:
+  mongo_data:
+    external: false
+    name: jira_migration_mongo_data
+  ollama_data:
+    external: false
+    name: jira_migration_ollama_data
+  redis_data:
+    external: false
+    name: jira_migration_redis_data
+  knowledge_chroma_data:
+    external: false
+    name: jira_migration_knowledge_chroma_data
+  report_generated_files:
+    external: false
+    name: jira_migration_report_generated_files
