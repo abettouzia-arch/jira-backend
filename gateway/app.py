@@ -178,6 +178,86 @@ def create_app():
             logger.error("Report request failed: %s", error)
             return jsonify({"error": f"Report request failed: {error}"}), 502
 
+    @app.route("/api/reports", methods=["GET"])
+    @jwt_required()
+    def list_reports():
+        """List all generated reports."""
+        try:
+            url = f"{REPORT_SERVICE_URL.rstrip('/')}/reports"
+            response = requests.get(url, timeout=REQUEST_TIMEOUT)
+            return jsonify(response.json()), response.status_code
+        except requests.exceptions.RequestException as error:
+            logger.error("List reports failed: %s", error)
+            return jsonify({"error": f"Report request failed: {error}"}), 502
+
+    @app.route("/api/reports/generate", methods=["POST"])
+    @jwt_required()
+    def generate_report():
+        """Generate a report from matrix_id or analysis_id."""
+        try:
+            url = f"{REPORT_SERVICE_URL.rstrip('/')}/reports/generate"
+            # Forward the JSON body to the report service
+            response = requests.post(url, json=request.get_json(), timeout=REQUEST_TIMEOUT)
+            return jsonify(response.json()), response.status_code
+        except requests.exceptions.RequestException as error:
+            logger.error("Generate report failed: %s", error)
+            return jsonify({"error": f"Report request failed: {error}"}), 502
+
+    @app.route("/api/reports/<report_id>/json", methods=["GET"])
+    @jwt_required()
+    def export_report_json(report_id):
+        """Export report as JSON file."""
+        try:
+            url = f"{REPORT_SERVICE_URL.rstrip('/')}/reports/{report_id}/json"
+            response = requests.get(url, timeout=REQUEST_TIMEOUT)
+
+            # If error (e.g. 404), return json error message
+            if response.status_code != 200:
+                return jsonify(response.json()), response.status_code
+
+            # Pass the file content and headers back to the client
+            filename = f'report_{report_id}.json'
+            headers = {
+                'Content-Disposition': response.headers.get(
+                    'Content-Disposition', f'attachment; filename={filename}'
+                ),
+                'Content-Type': response.headers.get('Content-Type', 'application/json')
+            }
+            return response.content, 200, headers
+
+        except requests.exceptions.RequestException as error:
+            logger.error("Report JSON export failed: %s", error)
+            return jsonify({"error": f"Report request failed: {error}"}), 502
+
+    @app.route("/api/reports/<report_id>/pdf", methods=["GET"])
+    @jwt_required()
+    def export_report_pdf(report_id):
+        """Export report as PDF file."""
+        try:
+            url = f"{REPORT_SERVICE_URL.rstrip('/')}/reports/{report_id}/pdf"
+            response = requests.get(url, timeout=REQUEST_TIMEOUT)
+
+            # If error (e.g. 404), return json error message
+            if response.status_code != 200:
+                try:
+                    return jsonify(response.json()), response.status_code
+                except ValueError:
+                    return jsonify({"error": "Failed to retrieve PDF"}), response.status_code
+
+            # Pass the PDF file content and headers back to the client
+            filename = f'report_{report_id}.pdf'
+            headers = {
+                'Content-Disposition': response.headers.get(
+                    'Content-Disposition', f'attachment; filename={filename}'
+                ),
+                'Content-Type': response.headers.get('Content-Type', 'application/pdf')
+            }
+            return response.content, 200, headers
+
+        except requests.exceptions.RequestException as error:
+            logger.error("Report PDF export failed: %s", error)
+            return jsonify({"error": f"Report request failed: {error}"}), 502
+
     return app
 
 
