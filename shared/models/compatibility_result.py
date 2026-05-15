@@ -12,6 +12,6 @@ class CompatibilityResult:
     analysis_id: str
     analyzed_at: str
     components: List[Dict[str, Any]] = field(default_factory=list)
-    summary: str = ""
+    summary: Dict[str, Any] = field(default_factory=dict)
     overall_risk: str = ""
     migration_score: Optional[float] = None

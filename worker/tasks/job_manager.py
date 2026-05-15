@@ -14,7 +14,10 @@ STATUS_RUNNING = "RUNNING"
 STATUS_COMPLETED = "COMPLETED"
 STATUS_FAILED = "FAILED"
 
-job_repo = JobRepository()
+
+def _repo() -> JobRepository:
+    """Create a fresh JobRepository instance."""
+    return JobRepository()
 
 
 def create_job(job_type: str = "FULL_ANALYSIS", payload: dict | None = None) -> dict:
@@ -35,7 +38,7 @@ def create_job(job_type: str = "FULL_ANALYSIS", payload: dict | None = None) -> 
         "result": {},
     }
 
-    job_repo.insert_job(job)
+    _repo().insert_job(job)
 
     job.pop("_id", None)
     return job
@@ -44,7 +47,8 @@ def create_job(job_type: str = "FULL_ANALYSIS", payload: dict | None = None) -> 
 def mark_running(job_id: str) -> None:
     """Mark a job as running."""
     now = datetime.utcnow().isoformat()
-    job_repo.update_job_status(
+
+    _repo().update_job_status(
         job_id,
         {
             "status": STATUS_RUNNING,
@@ -58,7 +62,8 @@ def mark_running(job_id: str) -> None:
 def mark_completed(job_id: str, result: dict) -> None:
     """Mark a job as completed."""
     now = datetime.utcnow().isoformat()
-    job_repo.update_job_status(
+
+    _repo().update_job_status(
         job_id,
         {
             "status": STATUS_COMPLETED,
@@ -73,7 +78,8 @@ def mark_completed(job_id: str, result: dict) -> None:
 def mark_failed(job_id: str, error: str) -> None:
     """Mark a job as failed."""
     now = datetime.utcnow().isoformat()
-    job_repo.update_job_status(
+
+    _repo().update_job_status(
         job_id,
         {
             "status": STATUS_FAILED,
@@ -86,7 +92,7 @@ def mark_failed(job_id: str, error: str) -> None:
 
 def get_job(job_id: str) -> dict | None:
     """Retrieve a job by ID."""
-    job = job_repo.get_job_by_id(job_id)
+    job = _repo().get_job_by_id(job_id)
 
     if job:
         job.pop("_id", None)
@@ -96,4 +102,4 @@ def get_job(job_id: str) -> dict | None:
 
 def list_jobs(limit: int = 50) -> list[dict]:
     """List recent jobs."""
-    return job_repo.list_jobs(limit)
+    return _repo().list_jobs(limit)

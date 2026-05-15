@@ -6,14 +6,16 @@ x-common-env: &common-env
   GEMINI_API_KEY: ${GEMINI_API_KEY}
   OLLAMA_URL: ${OLLAMA_URL}
   REDIS_URL: ${REDIS_URL}
-  PARSING_SERVICE_URL: ${PARSING_SERVICE_URL}
-  COMPATIBILITY_SERVICE_URL: ${COMPATIBILITY_SERVICE_URL}
-  KNOWLEDGE_SERVICE_URL: ${KNOWLEDGE_SERVICE_URL}
-  REPORT_SERVICE_URL: ${REPORT_SERVICE_URL}
-  WORKER_URL: ${WORKER_URL}
+  PARSING_SERVICE_URL: "http://parsing-service:5001"
+  COMPATIBILITY_SERVICE_URL: "http://compatibility-service:5002"
+  KNOWLEDGE_SERVICE_URL: "http://knowledge-service:5003"
+  REPORT_SERVICE_URL: "http://report-service:5004"
+  WORKER_URL: "http://worker:5005"
   ANONYMIZED_TELEMETRY: ${ANONYMIZED_TELEMETRY}
   PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION: ${PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION}
   FLASK_ENV: ${FLASK_ENV}
+  GEMINI_MODEL: ${GEMINI_MODEL}
+  TRUSTED_HOSTS: "docker.itspectrum.fr,docker.itspectrum.fr:5001,parsing-service,parsing-service:5001,compatibility-service,compatibility-service:5002,knowledge-service,knowledge-service:5003,report-service,report-service:5004,worker,worker:5005,localhost,localhost:5000,127.0.0.1,127.0.0.1:5000"
   DEBUG: ${DEBUG}
 
 services:
@@ -43,6 +45,11 @@ services:
     environment:
       <<: *common-env
       PORT: 5001
+    networks:
+      default:
+        aliases:
+          - parsing-service
+          - parsing_service
     depends_on:
       - mongodb
     restart: unless-stopped
@@ -57,6 +64,11 @@ services:
     environment:
       <<: *common-env
       PORT: 5002
+    networks:
+      default:
+        aliases:
+          - compatibility-service
+          - compatibility_service
     depends_on:
       - mongodb
       - knowledge_service
@@ -72,6 +84,11 @@ services:
     environment:
       <<: *common-env
       PORT: 5003
+    networks:
+      default:
+        aliases:
+          - knowledge-service
+          - knowledge_service
     volumes:
       - knowledge_chroma_data:/app/knowledge_service/chroma_db
     depends_on:
@@ -90,6 +107,11 @@ services:
     environment:
       <<: *common-env
       PORT: 5004
+    networks:
+      default:
+        aliases:
+          - report-service
+          - report_service
     depends_on:
       - mongodb
       - knowledge_service
@@ -108,15 +130,25 @@ services:
     depends_on:
       - redis
       - mongodb
+      - parsing_service
+      - compatibility_service
+      - report_service
     restart: unless-stopped
 
   mongodb:
     image: mongo:6
     container_name: mongo_db
-    ports:
-      - "27017:27017"
+    # ports:
+    #   - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD}
     volumes:
       - mongo_data:/data/db
+    networks:
+      default:
+        aliases:
+          - mongodb
     restart: unless-stopped
 
   redis:
@@ -133,8 +165,9 @@ services:
     ports:
       - "8081:8081"
     environment:
-      ME_CONFIG_MONGODB_URL: mongodb://mongodb:27017/
-      ME_CONFIG_BASICAUTH: "false"
+      ME_CONFIG_MONGODB_URL: mongodb://${MONGO_ROOT_USER}:${MONGO_ROOT_PASSWORD}@mongodb:27017/?authSource=admin
+      ME_CONFIG_BASICAUTH_USERNAME: spectrum_admin
+      ME_CONFIG_BASICAUTH_PASSWORD: AnasSuperMotDePasseWeb123
     depends_on:
       - mongodb
     restart: unless-stopped

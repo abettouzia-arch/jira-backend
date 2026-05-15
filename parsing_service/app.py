@@ -21,6 +21,7 @@ from shared.repositories.analysis_repository import AnalysisRepository
 from shared.schemas.parsed_data_schema import ParsedJiraData
 
 app = Flask(__name__)
+app.config["TRUSTED_HOSTS"] = None
 CORS(app)
 
 logging.basicConfig(level=logging.INFO)
@@ -41,12 +42,17 @@ def parse_jira_export():
     """
     Parse a Jira ZIP export and return structured entities and components.
     """
+    print("DEBUG: file in request.files:", "file" in request.files)
     if "file" not in request.files:
+        print("DEBUG: No file part")
         return jsonify({"error": "No file part"}), 400
 
     uploaded_file = request.files["file"]
+    print("DEBUG: filename:", repr(uploaded_file.filename))
+    print("DEBUG: content_type:", uploaded_file.content_type)
 
     if uploaded_file.filename == "":
+        print("DEBUG: No selected file")
         return jsonify({"error": "No selected file"}), 400
 
     filename = secure_filename(uploaded_file.filename)
@@ -55,6 +61,7 @@ def parse_jira_export():
 
     try:
         uploaded_file.save(zip_path)
+        print("DEBUG: Saved uploaded file to", zip_path)
         logger.info("Received file saved to %s", zip_path)
 
         extract_dir, routed_files = zip_handler.extract_and_route(zip_path)

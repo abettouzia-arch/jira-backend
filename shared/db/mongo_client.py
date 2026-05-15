@@ -25,6 +25,12 @@ def get_mongo_client() -> MongoClient:
 def get_mongo_db():
     """Return the configured MongoDB database instance."""
     mongo_uri = os.getenv("MONGO_URI", DEFAULT_MONGO_URI)
-    db_name = mongo_uri.rsplit("/", 1)[-1] or "jira_migration"
+
+    # On extrait d'abord ce qu'il y a après le dernier slash
+    path_part = mongo_uri.rsplit("/", 1)[-1]
+
+    # On ne garde que ce qui est AVANT le '?' s'il existe
+    db_name = path_part.split("?")[0] or "jira_migration"
+
     client = get_mongo_client()
     return client[db_name]

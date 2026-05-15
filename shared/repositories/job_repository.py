@@ -59,4 +59,8 @@ class JobRepository:
         Returns:
             List of job documents.
         """
-        return list(self.collection.find().sort("created_at", -1).limit(limit))
+        return list(
+            self.collection.find({}, {"_id": 0})
+            .sort("created_at", -1)
+            .limit(limit)
+        )
