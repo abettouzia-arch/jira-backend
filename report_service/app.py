@@ -109,6 +109,37 @@ def list_reports():
         return jsonify({"error": str(error)}), 500
 
 
+@app.route("/reports/archived", methods=["GET"])
+def list_archived_reports():
+    """List archived reports from the archived collection."""
+    try:
+        report_repo = ReportRepository()
+        archived_reports = report_repo.list_archived_reports()
+        return jsonify({"reports": archived_reports, "count": len(archived_reports)}), 200
+    except Exception as error:  # pylint: disable=broad-exception-caught
+        logger.error("Error listing archived reports: %s", error)
+        return jsonify({"error": str(error)}), 500
+
+
+@app.route("/reports/<report_id>/archive", methods=["POST"])
+def archive_report(report_id):
+    """Archive a report by moving it from reports to reports_archived."""
+    try:
+        report_repo = ReportRepository()
+        success = report_repo.archive_report(report_id)
+
+        if not success:
+            return jsonify({"error": f"Report '{report_id}' not found."}), 404
+
+        return jsonify({
+            "message": f"Report '{report_id}' archived successfully.",
+            "report_id": report_id,
+        }), 200
+    except Exception as error:  # pylint: disable=broad-exception-caught
+        logger.error("Error archiving report: %s", error)
+        return jsonify({"error": str(error)}), 500
+
+
 @app.route("/reports/<report_id>/json", methods=["GET"])
 def export_json(report_id):
     """Export an active report as JSON file."""

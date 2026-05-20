@@ -289,6 +289,30 @@ def create_app():
             logger.error("List reports failed: %s", error)
             return jsonify({"error": f"Report request failed: {error}"}), 502
 
+    @app.route("/api/reports/archived", methods=["GET"])
+    @jwt_required()
+    def list_archived_reports():
+        """List archived reports through the report service."""
+        try:
+            url = f"{REPORT_SERVICE_URL.rstrip('/')}/reports/archived"
+            response = requests.get(url, timeout=REQUEST_TIMEOUT)
+            return jsonify(response.json()), response.status_code
+        except requests.exceptions.RequestException as error:
+            logger.error("List archived reports failed: %s", error)
+            return jsonify({"error": f"Report request failed: {error}"}), 502
+
+    @app.route("/api/reports/<report_id>/archive", methods=["POST"])
+    @jwt_required()
+    def archive_report(report_id):
+        """Proxy report archival to the report service."""
+        try:
+            url = f"{REPORT_SERVICE_URL.rstrip('/')}/reports/{report_id}/archive"
+            response = requests.post(url, timeout=REQUEST_TIMEOUT)
+            return jsonify(response.json()), response.status_code
+        except requests.exceptions.RequestException as error:
+            logger.error("Archive report request failed: %s", error)
+            return jsonify({"error": f"Report request failed: {error}"}), 502
+
     @app.route("/api/reports/generate", methods=["POST"])
     @jwt_required()
     def generate_report():
