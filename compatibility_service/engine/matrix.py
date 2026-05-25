@@ -94,6 +94,7 @@ def build_matrix(analysis_id: str, component_results: list[dict]) -> dict:
             "migration_score": score,
             "migration_recommendation": recommendation,
         },
+        "optimization": _build_optimization_metrics(component_results),
         "components": component_results,
         "blockers": [
             {
@@ -128,6 +129,50 @@ def _get_status(component_result: dict) -> str:
     return component_result.get(
         "final_status",
         component_result.get("overall_status", "NEEDS_REVIEW"),
+    )
+
+
+def _build_optimization_metrics(component_results: list[dict]) -> dict:
+    """Build backend optimization metrics for observability and demos."""
+    total = len(component_results)
+    cache_hits = sum(1 for result in component_results if result.get("cache_hit") is True)
+    ai_skipped = sum(
+        1
+        for result in component_results
+        if result.get("ai_reasoning", {}).get("used") is False
+    )
+    ai_used = sum(
+        1
+        for result in component_results
+        if result.get("ai_reasoning", {}).get("used") is True
+    )
+    learned_matches = sum(
+        1
+        for result in component_results
+        if _has_learned_evidence(result)
+    )
+    rag_evidence_chunks = sum(
+        int(result.get("evidence_count", 0) or 0)
+        for result in component_results
+    )
+
+    return {
+        "total_components": total,
+        "cache_hits": cache_hits,
+        "ai_skipped": ai_skipped,
+        "ai_used": ai_used,
+        "learned_matches": learned_matches,
+        "rag_evidence_chunks": rag_evidence_chunks,
+        "estimated_ai_calls_saved": cache_hits + ai_skipped,
+    }
+
+
+def _has_learned_evidence(component_result: dict) -> bool:
+    """Return True when at least one RAG evidence chunk came from learned analyses."""
+    return any(
+        evidence.get("source_type") == "learned_component_analysis"
+        for evidence in component_result.get("evidence", [])
+        if isinstance(evidence, dict)
     )
 
 
@@ -211,6 +256,15 @@ def _empty_matrix(matrix_id: str, analysis_id: str) -> dict:
             "needs_review_count": 0,
             "migration_score": 100,
             "migration_recommendation": "No components found to analyze.",
+        },
+        "optimization": {
+            "total_components": 0,
+            "cache_hits": 0,
+            "ai_skipped": 0,
+            "ai_used": 0,
+            "learned_matches": 0,
+            "rag_evidence_chunks": 0,
+            "estimated_ai_calls_saved": 0,
         },
         "components": [],
         "blockers": [],

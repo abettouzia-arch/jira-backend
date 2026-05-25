@@ -90,6 +90,7 @@ def run_full_analysis_job(job_id: str, file_path: str) -> dict:
             "matrix_id": matrix_id,
             "report_id": report_id,
             "summary": compatibility_result.get("summary", {}),
+            "optimization": compatibility_result.get("optimization", {}),
             "report": {
                 "ai_used": report_result.get("ai_used", False),
                 "ai_model": report_result.get("ai_model", ""),

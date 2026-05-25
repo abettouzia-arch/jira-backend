@@ -17,8 +17,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # pylint: disable=wrong-import-position
 from compatibility_service.engine.hybrid_engine import analyze_components_hybrid
+from compatibility_service.engine.learned_knowledge_sync import (
+    trigger_learned_knowledge_sync,
+)
 from compatibility_service.engine.matrix import build_matrix
 from shared.repositories.analysis_repository import AnalysisRepository
+from shared.repositories.component_analysis_cache_repository import (
+    ComponentAnalysisCacheRepository,
+)
 from shared.repositories.compatibility_repository import CompatibilityRepository
 
 
@@ -96,6 +102,9 @@ def analyze():
     except Exception as error:  # pylint: disable=broad-exception-caught
         logger.warning("Could not save matrix to MongoDB: %s", error)
 
+    sync_started = trigger_learned_knowledge_sync()
+    logger.info("Learned knowledge background sync triggered: %s", sync_started)
+
     matrix.pop("_id", None)
 
     return jsonify(matrix), 200
@@ -129,6 +138,18 @@ def list_matrices():
 
     except Exception as error:  # pylint: disable=broad-exception-caught
         logger.error("Error listing matrices: %s", error)
+        return jsonify({"error": str(error)}), 500
+
+
+@app.route("/compatibility/cache/stats", methods=["GET"])
+def cache_stats():
+    """Return component analysis cache statistics."""
+    try:
+        cache_repo = ComponentAnalysisCacheRepository()
+        return jsonify(cache_repo.stats()), 200
+
+    except Exception as error:  # pylint: disable=broad-exception-caught
+        logger.error("Error retrieving cache stats: %s", error)
         return jsonify({"error": str(error)}), 500
 
 

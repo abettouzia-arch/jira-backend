@@ -18,6 +18,9 @@ from knowledge_service.indexer.document_loader import (
     get_collection_stats,
     index_documents,
 )
+from knowledge_service.indexer.learned_knowledge_loader import (
+    index_learned_component_knowledge,
+)
 from knowledge_service.retriever.search import search, search_for_component
 
 load_dotenv()
@@ -64,6 +67,23 @@ def index():
         }), 200
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Indexing failed: %s", e)
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/knowledge/index/learned-components", methods=["POST"])
+def index_learned_components():
+    """
+    Index learned component analysis results from MongoDB into ChromaDB.
+    Accepts optional { "limit": 500 }.
+    """
+    data = request.get_json() or {}
+    limit = data.get("limit", 500)
+
+    try:
+        result = index_learned_component_knowledge(limit=limit)
+        return jsonify(result), 200
+    except Exception as e:  # pylint: disable=broad-exception-caught
+        logger.error("Learned component indexing failed: %s", e)
         return jsonify({"error": str(e)}), 500
 
 

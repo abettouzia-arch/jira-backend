@@ -47,6 +47,11 @@ def search(query: str, top_k: int = DEFAULT_TOP_K) -> list[dict]:
         chunks.append({
             "text": doc,
             "source": metadata.get("source", ""),
+            "source_type": metadata.get("source_type", "documentation"),
+            "component_name": metadata.get("component_name", ""),
+            "signature": metadata.get("signature", ""),
+            "final_status": metadata.get("final_status", ""),
+            "final_risk": metadata.get("final_risk", ""),
             "chunk_index": metadata.get("chunk_index", 0),
             "distance": round(distance, 4),
         })

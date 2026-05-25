@@ -164,6 +164,11 @@ def summarize_evidence(evidence_chunks: list[dict]) -> list[dict[str, Any]]:
     for chunk in evidence_chunks:
         summarized.append({
             "source": chunk.get("source", ""),
+            "source_type": chunk.get("source_type", "documentation"),
+            "component_name": chunk.get("component_name", ""),
+            "signature": chunk.get("signature", ""),
+            "final_status": chunk.get("final_status", ""),
+            "final_risk": chunk.get("final_risk", ""),
             "chunk_index": chunk.get("chunk_index", 0),
             "distance": chunk.get("distance"),
             "text": chunk.get("text", "")[:500],

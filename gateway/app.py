@@ -40,6 +40,11 @@ logger = logging.getLogger(__name__)
 
 WORKER_URL = os.getenv("WORKER_URL", "http://worker:5005")
 REPORT_SERVICE_URL = os.getenv("REPORT_SERVICE_URL", "http://report_service:5004")
+COMPATIBILITY_SERVICE_URL = os.getenv(
+    "COMPATIBILITY_SERVICE_URL",
+    "http://compatibility_service:5002",
+)
+KNOWLEDGE_SERVICE_URL = os.getenv("KNOWLEDGE_SERVICE_URL", "http://knowledge_service:5003")
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 REQUEST_TIMEOUT = 180
 
@@ -351,6 +356,32 @@ def create_app():
         except requests.exceptions.RequestException as error:
             logger.error("Worker jobs request failed: %s", error)
             return jsonify({"error": f"Worker request failed: {error}"}), 502
+
+    @app.route("/api/compatibility/cache/stats", methods=["GET"])
+    @jwt_required()
+    def compatibility_cache_stats():
+        """Return component analysis cache statistics."""
+        try:
+            url = f"{COMPATIBILITY_SERVICE_URL.rstrip('/')}/compatibility/cache/stats"
+            response = requests.get(url, timeout=REQUEST_TIMEOUT)
+            return jsonify(response.json()), response.status_code
+
+        except requests.exceptions.RequestException as error:
+            logger.error("Compatibility cache stats request failed: %s", error)
+            return jsonify({"error": f"Compatibility service request failed: {error}"}), 502
+
+    @app.route("/api/knowledge/index/learned-components", methods=["POST"])
+    @jwt_required()
+    def index_learned_components():
+        """Proxy learned component indexing to the Knowledge Service."""
+        try:
+            url = f"{KNOWLEDGE_SERVICE_URL.rstrip('/')}/knowledge/index/learned-components"
+            response = requests.post(url, json=request.get_json() or {}, timeout=REQUEST_TIMEOUT)
+            return jsonify(response.json()), response.status_code
+
+        except requests.exceptions.RequestException as error:
+            logger.error("Learned component indexing request failed: %s", error)
+            return jsonify({"error": f"Knowledge service request failed: {error}"}), 502
 
     @app.route("/api/reports/<report_id>", methods=["GET"])
     @jwt_required()
