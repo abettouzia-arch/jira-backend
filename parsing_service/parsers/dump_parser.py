@@ -121,6 +121,7 @@ def create_component_from_snip(
 
     return JiraComponent(
         component_id=component_id,
+        component_name=build_component_name(display_location, filename),
         component_type="script",
         plugin="unknown",
         location=JiraComponentLocation(file_path=filename),
@@ -130,6 +131,18 @@ def create_component_from_snip(
         recommended_action="",
         report_text="",
     )
+
+
+def build_component_name(display_location: str, filename: str) -> str:
+    """Build a report-friendly name for a component detected in a dump file."""
+    file_label = Path(filename).stem.replace("_", " ").replace("-", " ").strip()
+    file_label = " ".join(word.capitalize() for word in file_label.split()) or filename
+
+    if " at " in display_location:
+        _, path = display_location.split(" at ", 1)
+        return f"{file_label} - {path}"
+
+    return file_label
 
 
 def parse_dump_files(file_list: list[dict]) -> list[JiraComponent]:

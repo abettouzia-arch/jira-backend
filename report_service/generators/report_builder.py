@@ -121,10 +121,14 @@ def _build_blockers_section(blockers: list[dict]) -> list[dict]:
     return [
         {
             "component_id": blocker.get("component_id", ""),
+            "component_name": _component_label(blocker),
             "plugin": blocker.get("plugin", ""),
             "risk_level": blocker.get("risk_level", ""),
             "overall_status": blocker.get("overall_status", ""),
-            "recommended_action": blocker.get("recommended_action", ""),
+            "recommended_action": _clean_component_text(
+                blocker.get("recommended_action", ""),
+                blocker,
+            ),
             "confidence": blocker.get("confidence"),
         }
         for blocker in blockers
@@ -136,6 +140,7 @@ def _build_components_section(components: list[dict]) -> list[dict]:
     return [
         {
             "component_id": component.get("component_id", ""),
+            "component_name": _component_label(component),
             "component_type": component.get("component_type", ""),
             "plugin": component.get("plugin", ""),
             "location": component.get("location", {}),
@@ -144,8 +149,14 @@ def _build_components_section(components: list[dict]) -> list[dict]:
             "confidence": component.get("confidence"),
             "features_analyzed": component.get("features_analyzed", []),
             "evidence_count": component.get("evidence_count", 0),
-            "reasoning_summary": component.get("reasoning_summary", ""),
-            "recommended_action": component.get("recommended_action", ""),
+            "reasoning_summary": _clean_component_text(
+                component.get("reasoning_summary", ""),
+                component,
+            ),
+            "recommended_action": _clean_component_text(
+                component.get("recommended_action", ""),
+                component,
+            ),
             "ai_reasoning": component.get("ai_reasoning", {}),
             "evidence": component.get("evidence", []),
         }
@@ -165,9 +176,26 @@ def _build_recommendations_section(components: list[dict]) -> list[dict]:
             recommendations.append({
                 "priority": risk,
                 "component_id": component.get("component_id", ""),
+                "component_name": _component_label(component),
                 "status": status,
-                "action": component.get("recommended_action", ""),
-                "reason": component.get("reasoning_summary", ""),
+                "action": _clean_component_text(component.get("recommended_action", ""), component),
+                "reason": _clean_component_text(component.get("reasoning_summary", ""), component),
             })
 
     return recommendations
+
+
+def _component_label(component: dict) -> str:
+    """Return the business component name shown in reports."""
+    return component.get("component_name") or component.get("component_id", "")
+
+
+def _clean_component_text(text: str, component: dict) -> str:
+    """Replace technical component IDs in report text with business component names."""
+    component_id = component.get("component_id", "")
+    component_name = component.get("component_name", "")
+
+    if not component_id or not component_name:
+        return text or ""
+
+    return str(text or "").replace(component_id, component_name)

@@ -173,20 +173,25 @@ def _build_reasoning_summary(rule_result: dict, evidence: list[dict]) -> str:
     """
     status = rule_result.get("overall_status", "NEEDS_REVIEW")
     risk = rule_result.get("risk_level", "MINOR")
-    component_id = rule_result.get("component_id", "unknown")
+    component_label = _component_label(rule_result)
     feature_count = len(rule_result.get("features_analyzed", []))
     evidence_count = len(evidence)
 
     if evidence_count > 0:
         return (
-            f"Component {component_id} was analyzed using deterministic compatibility "
+            f"Component {component_label} was analyzed using deterministic compatibility "
             f"rules and enriched with {evidence_count} documentation evidence chunk(s). "
             f"The current baseline assessment is {status} with {risk} risk, based on "
             f"{feature_count} analyzed feature(s)."
         )
 
     return (
-        f"Component {component_id} was analyzed using deterministic compatibility rules. "
+        f"Component {component_label} was analyzed using deterministic compatibility rules. "
         f"No additional RAG evidence was retrieved. The current baseline assessment is "
         f"{status} with {risk} risk, based on {feature_count} analyzed feature(s)."
     )
+
+
+def _component_label(component: dict) -> str:
+    """Return the report-friendly component label, falling back to the technical ID."""
+    return component.get("component_name") or component.get("component_id", "unknown")

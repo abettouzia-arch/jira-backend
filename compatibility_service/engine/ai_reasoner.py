@@ -86,6 +86,7 @@ STRICT RULES:
   such as java_api, direct_database_query, filesystem_access, jdbc_connection_usage,
   keep the result INCOMPATIBLE unless the evidence strongly proves otherwise.
 - Use the RAG evidence to refine the final recommendation and explanation.
+- In human-readable fields, use component_name when available and do not expose technical component_id values.
 - Return ONLY valid JSON.
 - Do not include markdown.
 - Do not include extra commentary.

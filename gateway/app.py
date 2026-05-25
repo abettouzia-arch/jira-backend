@@ -20,6 +20,9 @@ from flask_jwt_extended import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 import requests
+from google.auth.exceptions import GoogleAuthError
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 
 
 load_dotenv()
@@ -37,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 WORKER_URL = os.getenv("WORKER_URL", "http://worker:5005")
 REPORT_SERVICE_URL = os.getenv("REPORT_SERVICE_URL", "http://report_service:5004")
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 REQUEST_TIMEOUT = 180
 
 EMAIL_REGEX = r"^[\w\.-]+@[\w\.-]+\.\w+$"
@@ -56,6 +60,35 @@ def _ensure_admin_user(user_repo: UserRepository) -> None:
             generate_password_hash(admin_password),
             role="admin",
         )
+
+
+def _google_client_ids() -> list[str]:
+    """Return configured Google OAuth client IDs."""
+    return [
+        client_id.strip()
+        for client_id in GOOGLE_CLIENT_ID.split(",")
+        if client_id.strip()
+    ]
+
+
+def _verify_google_id_token(credential: str) -> dict:
+    """Verify a Google Identity Services ID token."""
+    client_ids = _google_client_ids()
+    if not client_ids:
+        raise ValueError("GOOGLE_CLIENT_ID is not configured.")
+
+    last_error = None
+    for client_id in client_ids:
+        try:
+            return google_id_token.verify_oauth2_token(
+                credential,
+                google_requests.Request(),
+                client_id,
+            )
+        except (ValueError, GoogleAuthError) as error:
+            last_error = error
+
+    raise ValueError(f"Invalid Google credential: {last_error}")
 
 
 def create_app():
@@ -133,11 +166,75 @@ def create_app():
             return jsonify({"error": "Request body is required"}), 400
 
         user = user_repo.get_user_by_email(data.get("email", ""))
-        if user and check_password_hash(user["password_hash"], data.get("password", "")):
+        password_hash = user.get("password_hash") if user else None
+        if password_hash and check_password_hash(password_hash, data.get("password", "")):
             token = create_access_token(identity=user["email"])
             return jsonify({"token": token}), 200
 
         return jsonify({"error": "Invalid credentials"}), 401
+
+    @app.route("/api/auth/google", methods=["POST"])
+    def google_login():
+        """
+        Authenticate using a Google Identity Services ID token.
+
+        Body:
+          { "credential": "<google_id_token>" }
+        """
+        data = request.get_json()
+
+        if not data:
+            return jsonify({"error": "Request body is required"}), 400
+
+        credential = data.get("credential") or data.get("id_token")
+        if not credential:
+            return jsonify({"error": "Google credential is required"}), 400
+
+        try:
+            google_payload = _verify_google_id_token(credential)
+        except ValueError as error:
+            logger.warning("Google authentication failed: %s", error)
+            return jsonify({"error": "Invalid Google credential"}), 401
+
+        email = google_payload.get("email")
+        email_verified = google_payload.get("email_verified")
+        google_user_id = google_payload.get("sub")
+
+        if not email or not google_user_id:
+            return jsonify({"error": "Google credential is missing required profile data"}), 401
+
+        if email_verified is not True:
+            return jsonify({"error": "Google account email is not verified"}), 401
+
+        user = user_repo.get_user_by_email(email)
+        if user is None:
+            user = user_repo.create_oauth_user(
+                email=email,
+                provider="google",
+                provider_user_id=google_user_id,
+                name=google_payload.get("name"),
+                picture=google_payload.get("picture"),
+            )
+        else:
+            user_repo.link_oauth_provider(
+                email=email,
+                provider="google",
+                provider_user_id=google_user_id,
+                name=google_payload.get("name"),
+                picture=google_payload.get("picture"),
+            )
+
+        token = create_access_token(identity=email)
+        return jsonify({
+            "token": token,
+            "user": {
+                "email": email,
+                "name": google_payload.get("name"),
+                "picture": google_payload.get("picture"),
+                "role": user.get("role", "user"),
+                "auth_provider": "google",
+            },
+        }), 200
 
     @app.route("/api/register", methods=["POST"])
     def register():

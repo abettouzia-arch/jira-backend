@@ -91,6 +91,7 @@ def analyze_component(component: dict) -> dict:
 
     return {
         "component_id": component_id,
+        "component_name": component.get("component_name", ""),
         "component_type": component.get("component_type", ""),
         "plugin": plugin,
         "location": component.get("location", {}),

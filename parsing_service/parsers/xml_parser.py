@@ -111,6 +111,7 @@ def parse_xml_streaming(file_path: str) -> ParsedJiraData:
                     all_features = list(set(quick_features + ai_features))
 
                     if all_features:
+                        component_name = _build_xml_component_name(tag, elem.attrib)
                         comp_id = (
                         f"XML-{uuid.uuid5(uuid.NAMESPACE_URL, str(elem.attrib)).hex[:8].upper()}"
                         )
@@ -120,6 +121,7 @@ def parse_xml_streaming(file_path: str) -> ParsedJiraData:
 
                         comp = JiraComponent(
                             component_id=comp_id,
+                            component_name=component_name,
                             component_type=component_type,
                             plugin="native",
                             location=JiraComponentLocation(
@@ -150,3 +152,13 @@ def parse_xml_streaming(file_path: str) -> ParsedJiraData:
         len(parsed_data.components),
     )
     return parsed_data
+
+
+def _build_xml_component_name(tag: str, attributes: dict) -> str:
+    """Return the best business label available for an XML component."""
+    for key in ("name", "workflowName", "displayName", "title"):
+        value = attributes.get(key)
+        if value:
+            return value
+
+    return f"{tag} in entities.xml"

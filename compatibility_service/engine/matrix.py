@@ -98,6 +98,7 @@ def build_matrix(analysis_id: str, component_results: list[dict]) -> dict:
         "blockers": [
             {
                 "component_id": result.get("component_id", "unknown"),
+                "component_name": result.get("component_name", ""),
                 "plugin": result.get("plugin", ""),
                 "risk_level": _get_risk(result),
                 "overall_status": _get_status(result),

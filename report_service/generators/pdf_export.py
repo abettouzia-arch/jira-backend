@@ -84,7 +84,7 @@ def export_report_to_pdf(
         blocker_rows = [["Component", "Plugin", "Risk", "Status"]]
         for blocker in blockers:
             blocker_rows.append([
-                blocker.get("component_id", ""),
+                _component_label(blocker),
                 blocker.get("plugin", ""),
                 blocker.get("risk_level", ""),
                 blocker.get("overall_status", ""),
@@ -105,7 +105,7 @@ def export_report_to_pdf(
         for recommendation in recommendations[:10]:
             text = (
                 f"<b>{_clean_inline(recommendation.get('priority', ''))}</b> — "
-                f"{_clean_inline(recommendation.get('component_id', ''))}: "
+                f"{_clean_inline(_component_label(recommendation))}: "
                 f"{_clean_inline(recommendation.get('action', ''))}"
             )
             story.append(Paragraph(text, styles["BodyText"]))
@@ -160,6 +160,11 @@ def _clean_inline(text: str) -> str:
     text = re.sub(r"`(.*?)`", r"<font name='Courier'>\1</font>", text)
 
     return text
+
+
+def _component_label(component: dict) -> str:
+    """Return the business component name shown in PDFs."""
+    return component.get("component_name") or component.get("component_id", "")
 
 
 def _table_style() -> TableStyle:

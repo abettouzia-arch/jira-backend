@@ -10,6 +10,7 @@ import logging
 import os
 import sys
 import uuid
+from pathlib import Path
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
@@ -91,6 +92,17 @@ def detect_plugin(code: str) -> str:
     return "MISC"
 
 
+def build_component_name(filename: str) -> str:
+    """Build a human-readable component name from a script filename."""
+    stem = Path(filename).stem
+    name = stem.replace("_", " ").replace("-", " ").strip()
+
+    while name and name[0].isdigit():
+        name = name[1:].strip()
+
+    return " ".join(word.capitalize() for word in name.split()) or filename
+
+
 def parse_groovy_file(file_info: dict) -> JiraComponent:
     """
     Parse a single .groovy file and return a JiraComponent.
@@ -113,6 +125,7 @@ def parse_groovy_file(file_info: dict) -> JiraComponent:
 
     component = JiraComponent(
         component_id=component_id,
+        component_name=build_component_name(filename),
         component_type=component_type,
         plugin=plugin,
         location=JiraComponentLocation(

@@ -50,7 +50,7 @@ Global Recommendation:
 
     for blocker in blockers[:5]:
         prompt += f"""
-- Component: {blocker.get("component_id")}
+- Component: {blocker.get("component_name") or blocker.get("component_id")}
   Risk: {blocker.get("final_risk")}
   Issue: {blocker.get("reasoning_summary")}
   Fix: {blocker.get("recommended_action")}
@@ -74,6 +74,7 @@ Constraints:
 - Use a professional consulting tone
 - Do NOT repeat raw JSON
 - Do NOT invent components or risks not present in the input data
+- When referencing components, use their business names only; do not expose technical component IDs.
 """
 
     return prompt.strip()
